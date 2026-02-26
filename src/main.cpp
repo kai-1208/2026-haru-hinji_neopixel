@@ -1,9 +1,10 @@
 #include <Arduino.h>
 #include <FastLED.h>
 
-#define NUM_LEDS 30 // neopixelの数
+#define NUM_LEDS 75 // neopixelの数
 #define DATA_PIN 6 // arduinoのd6ピン
 #define BRIGHTNESS 200 // LEDの最大輝度(0-255)
+#define NUM_STATUS_LEDS 15 // ステータス表示に使用するLEDの数
 
 CRGB leds[NUM_LEDS];
 
@@ -12,24 +13,24 @@ enum LedState {
     UART_LOST,      // 1.uart遮断 : 赤点滅
     CAN_LOST,       // 2.can遮断 : 黄点滅
     NORMAL,         // 3.通常(通信OK) : 青紫ドクンドクン
-    CLEAR,          // 4.クリア : 緑点滅
-    // AUTO,           // 3.自動 : 黄色
-    // SEMI_AUTO,      // 4.半自動(センサ・システム動作中) : 黄色点滅
-    // HIGH_SPEED,     // 5.高速モード : 赤色
-    // LOW_SPEED,      // 6.低速モード : 青色
-    // STANDBY,        // 7.待機モード : 白色ランダム
+    CLEAR,          // 4.クリア : 緑点滅ウェーブ
 };
 
 LedState currentState = NORMAL;
+bool statusBools[NUM_STATUS_LEDS]; // 受信したbool値 false: 緑点灯, true: 赤点滅
 
 unsigned long previousMillis = 0;
 bool blinkState = false;
+
+// ステータスLED用の点滅管理
+unsigned long statusBlinkMillis = 0;
+bool statusBlinkState = false;
 
 /**
  * @brief 消灯
 */
 void handleOff() {
-    fill_solid(leds, NUM_LEDS, CRGB::Black);
+    fill_solid(leds + NUM_STATUS_LEDS, NUM_LEDS - NUM_STATUS_LEDS, CRGB::Black);
     FastLED.show();
 }
 
@@ -43,7 +44,7 @@ void handleUartLost() {
         blinkState = !blinkState;
     }
     CRGB color = blinkState ? CRGB::Red : CRGB::Black;
-    fill_solid(leds, NUM_LEDS, color);
+    fill_solid(leds + NUM_STATUS_LEDS, NUM_LEDS - NUM_STATUS_LEDS, color);
     FastLED.show();
 }
 
@@ -57,7 +58,7 @@ void handleCanLost() {
         blinkState = !blinkState;
     }
     CRGB color = blinkState ? CRGB::Yellow : CRGB::Black;
-    fill_solid(leds, NUM_LEDS, color);
+    fill_solid(leds + NUM_STATUS_LEDS, NUM_LEDS - NUM_STATUS_LEDS, color);
     FastLED.show();
 }
 
@@ -103,7 +104,7 @@ void handleNormal() {
         }
     }
     // 3. 計算した明るさを全てのLEDに適用
-    fill_solid(leds, NUM_LEDS, CRGB(brightness*0.45, 0, brightness*1.27));
+    fill_solid(leds + NUM_STATUS_LEDS, NUM_LEDS - NUM_STATUS_LEDS, CRGB(brightness*0.45, 0, brightness*1.27));
     FastLED.show();
 
     // // 白のウェーブ
@@ -130,6 +131,9 @@ void handleNormal() {
     // FastLED.show();
 }
 
+/**
+ * @brief 緑点滅
+ */
 void handleClear() {
     unsigned long currentMillis = millis();
     if (currentMillis - previousMillis >= 500) {
@@ -137,8 +141,34 @@ void handleClear() {
         blinkState = !blinkState;
     }
     CRGB color = blinkState ? CRGB::Green : CRGB::Black;
-    fill_solid(leds, NUM_LEDS, color);
+    fill_solid(leds + NUM_STATUS_LEDS, NUM_LEDS - NUM_STATUS_LEDS, color);
     FastLED.show();
+}
+
+/**
+ * @brief ステータスLEDの更新
+ */
+void handleStatusLeds() {
+    unsigned long currentMillis = millis();
+    // 赤点滅用のタイマー (500ms間隔と仮定)
+    if (currentMillis - statusBlinkMillis >= 500) {
+        statusBlinkMillis = currentMillis;
+        statusBlinkState = !statusBlinkState;
+    }
+
+    for (int i = 0; i < NUM_STATUS_LEDS; i++) {
+        if (statusBools[i] == false) {
+            // falseなら緑点灯
+            leds[i] = CRGB::Green;
+        } else {
+            // trueなら赤点滅
+            if (statusBlinkState) {
+                leds[i] = CRGB::Red;
+            } else {
+                leds[i] = CRGB::Black;
+            }
+        }
+    }
 }
 
 /**
@@ -277,37 +307,58 @@ void handleClear() {
 //     FastLED.show();
 // }
 
+/**
+ * @brief 受信データのパース処理
+ * 形式: "State,bool1,bool2...bool15\n" 例: "3,0,1,0...\n"
+ */
 void checkSerialInput() {
     if (Serial.available() > 0) {
-        char command = Serial.read();
-        LedState previousState = currentState;
+        String input = Serial.readStringUntil('\n');
+        input.trim(); // 改行コード除去
 
-        switch (command) {
-            case '0': currentState = OFF;         break;
-            case '1': currentState = UART_LOST;   break;
-            case '2': currentState = CAN_LOST;    break;
-            case '3': currentState = NORMAL;      break;
-            case '4': currentState = CLEAR;       break;
-            // case '3': currentState = AUTO;        break;
-            // case '4': currentState = SEMI_AUTO;   break;
-            // case '5': currentState = HIGH_SPEED;  break;
-            // case '6': currentState = LOW_SPEED;   break;
-            // case '7': currentState = STANDBY;     break;
-            default: return;
-        }
+        if (input.length() > 0) {
+            // 最初の1文字目をStateとして取得
+            char stateChar = input.charAt(0);
+            
+            // State更新
+            switch (stateChar) {
+                case '0': currentState = OFF; break;
+                case '1': currentState = UART_LOST; break;
+                case '2': currentState = CAN_LOST; break;
+                case '3': currentState = NORMAL; break;
+                case '4': currentState = CLEAR; break;
+                default: 
+                    // 不正な値なら何もしないか、あるいは維持
+                    break;
+            }
 
-        // 状態が変わったらメッセージを表示
-        if (previousState != currentState) {
-            Serial.print("State changed to: ");
-            Serial.println(command);
-            previousMillis = millis();
-            blinkState = true;
+            // 2文字目以降（カンマ区切り）をパース
+            // フォーマット例: "3,0,1,0,0..."
+            // 最初のカンマを探す
+            int searchIndex = 1; 
+            for (int i = 0; i < NUM_STATUS_LEDS; i++) {
+                int commaIndex = input.indexOf(',', searchIndex);
+                if (commaIndex == -1) {
+                    // 最後の要素の場合、またはフォーマット不正で途中終了した場合
+                    if (searchIndex < input.length()) {
+                        String valStr = input.substring(searchIndex); // 末尾まで
+                        statusBools[i] = (valStr.toInt() == 1);
+                    }
+                    break; 
+                }
+                
+                String valStr = input.substring(searchIndex, commaIndex);
+                statusBools[i] = (valStr.toInt() == 1);
+                
+                searchIndex = commaIndex + 1;
+            }
         }
     }
 }
 
 void setup() {
     Serial.begin(9600);
+    Serial.setTimeout(50); 
     delay(2000); // 起動待機
 
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
@@ -315,10 +366,16 @@ void setup() {
 
     Serial.println("Hello, world");
     currentState = NORMAL;
+
+    // 初期化：すべてのステータスをfalse(緑)にしておく
+    for(int i=0; i<NUM_STATUS_LEDS; i++) {
+        statusBools[i] = false;
+    }
 }
 
 void loop() {
     checkSerialInput();
+    handleStatusLeds();
 
     switch (currentState) {
         case OFF:           handleOff();          break;
@@ -326,10 +383,7 @@ void loop() {
         case CAN_LOST:      handleCanLost();      break;
         case NORMAL:        handleNormal();       break;
         case CLEAR:         handleClear();        break;
-        // case AUTO:          handleAuto();         break;
-        // case SEMI_AUTO:     handleSemiAuto();     break;
-        // case HIGH_SPEED:    handleHighSpeed();    break;
-        // case LOW_SPEED:     handleLowSpeed();     break;
-        // case STANDBY:       handleStandby();      break;
     }
+
+    FastLED.show();
 }
