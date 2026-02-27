@@ -17,7 +17,7 @@ enum LedState {
 };
 
 LedState currentState = NORMAL;
-bool statusBools[NUM_STATUS_LEDS]; // 受信したbool値 false: 緑点灯, true: 赤点滅
+bool statusBools[NUM_STATUS_LEDS]; // 受信したbool値 false: 緑点灯, true: 赤点滅 リミットスイッチ false(sw押されている): 黄点灯, true: 緑点灯
 
 unsigned long previousMillis = 0;
 bool blinkState = false;
@@ -335,7 +335,6 @@ void checkSerialInput() {
                 case '3': currentState = NORMAL; break;
                 case '4': currentState = CLEAR; break;
                 default: 
-                    // 不正な値なら何もしないか、あるいは維持
                     break;
             }
 
@@ -353,19 +352,25 @@ void checkSerialInput() {
                     }
                     break; 
                 }
-                
                 String valStr = input.substring(searchIndex, commaIndex);
                 statusBools[i] = (valStr.toInt() == 1);
-                
                 searchIndex = commaIndex + 1;
             }
-        } else {
-            if (millis() - lastUartReceivedMillis >= 100) { // uart、し... 死んでる
-                currentState = UART_LOST;
-                if (NUM_STATUS_LEDS > 5) {
-                    statusBools[5] = true; // 6番目のLEDを赤点滅にする
-                }
+            // printf("curr_state: %d", currentState);
+            // printf("status_bools: ");
+            // for (int i = 0; i < NUM_STATUS_LEDS; i++) {
+            //     printf("%d ", statusBools[i]);
+            // }
+            // printf("\n");
+        } 
+        printf("Received input: %s\n", input.c_str());
+    } else {
+        if (millis() - lastUartReceivedMillis >= 100) { // uart、し... 死んでる
+            currentState = UART_LOST;
+            if (NUM_STATUS_LEDS > 5) {
+                statusBools[5] = true; // 6番目のLEDを赤点滅にする
             }
+            printf("UART timeout\n");
         }
     }
 }
