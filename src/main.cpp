@@ -4,7 +4,7 @@
 #define NUM_LEDS 75 // neopixelの数
 #define DATA_PIN 6 // arduinoのd6ピン
 #define BRIGHTNESS 200 // LEDの最大輝度(0-255)
-#define NUM_STATUS_LEDS 15 // ステータス表示に使用するLEDの数
+#define NUM_STATUS_LEDS 12 // ステータス表示に使用するLEDの数
 
 CRGB leds[NUM_LEDS];
 
@@ -22,6 +22,9 @@ bool statusBools[NUM_STATUS_LEDS]; // 受信したbool値 false: 緑点灯, true
 unsigned long previousMillis = 0;
 bool blinkState = false;
 
+// UART通信監視用
+unsigned long lastUartReceivedMillis = 0; // 最後に受信した時刻
+
 // ステータスLED用の点滅管理
 unsigned long statusBlinkMillis = 0;
 bool statusBlinkState = false;
@@ -35,7 +38,7 @@ void handleOff() {
 }
 
 /**
- * @brief 赤点滅(500ms間隔)
+ * @brief 黄点滅(500ms間隔)
  */
 void handleUartLost() {
     unsigned long currentMillis = millis();
@@ -43,13 +46,13 @@ void handleUartLost() {
         previousMillis = currentMillis;
         blinkState = !blinkState;
     }
-    CRGB color = blinkState ? CRGB::Red : CRGB::Black;
+    CRGB color = blinkState ? CRGB::Yellow : CRGB::Black;
     fill_solid(leds + NUM_STATUS_LEDS, NUM_LEDS - NUM_STATUS_LEDS, color);
     FastLED.show();
 }
 
 /**
- * @brief 黄点滅(500ms間隔)
+ * @brief 赤点滅(500ms間隔)
  */
 void handleCanLost() {
     unsigned long currentMillis = millis();
@@ -57,7 +60,7 @@ void handleCanLost() {
         previousMillis = currentMillis;
         blinkState = !blinkState;
     }
-    CRGB color = blinkState ? CRGB::Yellow : CRGB::Black;
+    CRGB color = blinkState ? CRGB::Red : CRGB::Black;
     fill_solid(leds + NUM_STATUS_LEDS, NUM_LEDS - NUM_STATUS_LEDS, color);
     FastLED.show();
 }
@@ -157,15 +160,17 @@ void handleStatusLeds() {
     }
 
     for (int i = 0; i < NUM_STATUS_LEDS; i++) {
-        if (statusBools[i] == false) {
-            // falseなら緑点灯
-            leds[i] = CRGB::Green;
-        } else {
-            // trueなら赤点滅
-            if (statusBlinkState) {
-                leds[i] = CRGB::Red;
+        if (i < 6) {
+            if (statusBools[i] == false) {
+                leds[i] = CRGB::Green;
             } else {
-                leds[i] = CRGB::Black;
+                leds[i] = statusBlinkState ? CRGB::Red : CRGB::Black;
+            }
+        } else {
+            if (statusBools[i] == false) {
+                leds[i] = CRGB::Yellow;
+            } else {
+                leds[i] = CRGB::Green;
             }
         }
     }
@@ -313,6 +318,8 @@ void handleStatusLeds() {
  */
 void checkSerialInput() {
     if (Serial.available() > 0) {
+        lastUartReceivedMillis = millis(); // 最後に受信した時刻を更新
+
         String input = Serial.readStringUntil('\n');
         input.trim(); // 改行コード除去
 
@@ -352,13 +359,20 @@ void checkSerialInput() {
                 
                 searchIndex = commaIndex + 1;
             }
+        } else {
+            if (millis() - lastUartReceivedMillis >= 100) { // uart、し... 死んでる
+                currentState = UART_LOST;
+                if (NUM_STATUS_LEDS > 5) {
+                    statusBools[5] = true; // 6番目のLEDを赤点滅にする
+                }
+            }
         }
     }
 }
 
 void setup() {
     Serial.begin(9600);
-    Serial.setTimeout(50); 
+    Serial.setTimeout(50);
     delay(2000); // 起動待機
 
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
@@ -366,6 +380,8 @@ void setup() {
 
     Serial.println("Hello, world");
     currentState = NORMAL;
+
+    lastUartReceivedMillis = millis(); // 初期化
 
     // 初期化：すべてのステータスをfalse(緑)にしておく
     for(int i=0; i<NUM_STATUS_LEDS; i++) {
