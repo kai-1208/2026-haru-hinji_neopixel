@@ -5,6 +5,7 @@
 #define DATA_PIN 6 // arduinoのd6ピン
 #define BRIGHTNESS 200 // LEDの最大輝度(0-255)
 #define NUM_STATUS_LEDS 12 // ステータス表示に使用するLEDの数
+#define STATUS_BRIGHTNESS 50 // ステータスLEDの個別の明るさ(0-255)
 
 CRGB leds[NUM_LEDS];
 
@@ -173,6 +174,8 @@ void handleStatusLeds() {
                 leds[i] = CRGB::Green;
             }
         }
+        // ステータスLEDの明るさを調整
+        leds[i].nscale8(STATUS_BRIGHTNESS);
     }
 }
 
