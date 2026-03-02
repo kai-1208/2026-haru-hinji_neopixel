@@ -4,21 +4,22 @@
 #define NUM_LEDS 75 // neopixelの数
 #define DATA_PIN 6 // arduinoのd6ピン
 #define BRIGHTNESS 200 // LEDの最大輝度(0-255)
-#define NUM_STATUS_LEDS 12 // ステータス表示に使用するLEDの数
+#define NUM_STATUS_LEDS 15 // ステータス表示に使用するLEDの数
+#define NUM_BOOLS 13 // 受信するbool値の数 (statusBoolsのサイズ)
 #define STATUS_BRIGHTNESS 50 // ステータスLEDの個別の明るさ(0-255)
 
 CRGB leds[NUM_LEDS];
 
 enum LedState {
     OFF,            // 0.LEDオフ : 消灯
-    UART_LOST,      // 1.uart遮断 : 赤点滅
-    CAN_LOST,       // 2.can遮断 : 黄点滅
+    UART_LOST,      // 1.uart遮断 : 黄点滅
+    CAN_LOST,       // 2.can遮断 : 赤点滅
     NORMAL,         // 3.通常(通信OK) : 青紫ドクンドクン
     CLEAR,          // 4.クリア : 緑点滅ウェーブ
 };
 
 LedState currentState = NORMAL;
-bool statusBools[NUM_STATUS_LEDS]; // 受信したbool値 false: 緑点灯, true: 赤点滅 リミットスイッチ false(sw押されている): 黄点灯, true: 緑点灯
+bool statusBools[NUM_BOOLS]; // 受信したbool値 false: 緑点灯, true: 赤点滅 リミットスイッチ false(sw押されている): 黄点灯, true: 緑点灯
 
 unsigned long previousMillis = 0;
 bool blinkState = false;
@@ -160,19 +161,45 @@ void handleStatusLeds() {
         statusBlinkState = !statusBlinkState;
     }
 
+    // LEDのグループごとの制御
+    // グループ1: LED 0-4 (statusBools[6], [9])
+    CRGB colorGroup1 = CRGB::Black;
+    if (statusBools[6]) {
+        colorGroup1 = CRGB::Yellow;
+    } else if (statusBools[9]) {
+        colorGroup1 = CRGB::Blue;
+    }
+
+    // グループ2: LED 5-9 (statusBools[7], [10])
+    CRGB colorGroup2 = CRGB::Black;
+    if (statusBools[7]) {
+        colorGroup2 = CRGB::Yellow;
+    } else if (statusBools[10]) {
+        colorGroup2 = CRGB::Blue;
+    }
+
+    // グループ3: LED 10-14 (statusBools[8], [12])
+    CRGB colorGroup3 = CRGB::Black;
+    if (statusBools[8]) {
+        colorGroup3 = CRGB::Yellow;
+    } else if (statusBools[12]) {
+        colorGroup3 = CRGB::Blue;
+    }
+
+    if (statusBools[12]) {
+        colorGroup1 = CRGB::Black;
+        colorGroup2 = CRGB::Black;
+        colorGroup3 = CRGB::Black;
+    }
+
+    // 色の適用
     for (int i = 0; i < NUM_STATUS_LEDS; i++) {
-        if (i < 6) {
-            if (statusBools[i] == false) {
-                leds[i] = CRGB::Green;
-            } else {
-                leds[i] = statusBlinkState ? CRGB::Red : CRGB::Black;
-            }
-        } else {
-            if (statusBools[i] == false) {
-                leds[i] = CRGB::Yellow;
-            } else {
-                leds[i] = CRGB::Green;
-            }
+        if (i < 5) {
+            leds[i] = colorGroup1;
+        } else if (i < 10) {
+            leds[i] = colorGroup2;
+        } else if (i < 15) {
+            leds[i] = colorGroup3;
         }
         // ステータスLEDの明るさを調整
         leds[i].nscale8(STATUS_BRIGHTNESS);
@@ -345,7 +372,7 @@ void checkSerialInput() {
             // フォーマット例: "3,0,1,0,0..."
             // 最初のカンマを探す
             int searchIndex = 1; 
-            for (int i = 0; i < NUM_STATUS_LEDS; i++) {
+            for (int i = 0; i < NUM_BOOLS; i++) {
                 int commaIndex = input.indexOf(',', searchIndex);
                 if (commaIndex == -1) {
                     // 最後の要素の場合、またはフォーマット不正で途中終了した場合
@@ -359,21 +386,24 @@ void checkSerialInput() {
                 statusBools[i] = (valStr.toInt() == 1);
                 searchIndex = commaIndex + 1;
             }
-            // printf("curr_state: %d", currentState);
-            // printf("status_bools: ");
-            // for (int i = 0; i < NUM_STATUS_LEDS; i++) {
-            //     printf("%d ", statusBools[i]);
-            // }
-            // printf("\n");
-        } 
-        printf("Received input: %s\n", input.c_str());
-    } else {
-        if (millis() - lastUartReceivedMillis >= 100) { // uart、し... 死んでる
-            currentState = UART_LOST;
-            if (NUM_STATUS_LEDS > 5) {
-                statusBools[5] = true; // 6番目のLEDを赤点滅にする
+            if (statusBools[12]) {
+                currentState = LedState::OFF;
             }
-            printf("UART timeout\n");
+            Serial.println("curr_state: " + String(currentState));
+            Serial.print("status_bools: ");
+            for (int i = 0; i < NUM_BOOLS; i++) {
+                Serial.print(statusBools[i]);
+                Serial.print(" ");
+            }
+            Serial.println("\n");
+        } 
+        // Serial.println("Received input: " + input);
+    } else {
+        if (millis() - lastUartReceivedMillis >= 300) { // uart、し... 死んでる
+            currentState = UART_LOST;
+            // Serial.println("UART timeout\n");
+        } else {
+            currentState = NORMAL;
         }
     }
 }
@@ -392,7 +422,7 @@ void setup() {
     lastUartReceivedMillis = millis(); // 初期化
 
     // 初期化：すべてのステータスをfalse(緑)にしておく
-    for(int i=0; i<NUM_STATUS_LEDS; i++) {
+    for(int i=0; i<NUM_BOOLS; i++) {
         statusBools[i] = false;
     }
 }
@@ -400,6 +430,8 @@ void setup() {
 void loop() {
     checkSerialInput();
     handleStatusLeds();
+
+    // currentState = NORMAL;
 
     switch (currentState) {
         case OFF:           handleOff();          break;
