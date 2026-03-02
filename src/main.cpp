@@ -381,7 +381,7 @@ void checkSerialInput() {
         } 
         // Serial.println("Received input: " + input);
     } else {
-        if (millis() - lastUartReceivedMillis >= 300) { // uart、し... 死んでる
+        if (millis() - lastUartReceivedMillis >= 2000) { // uart、し... 死んでる
             currentState = UART_LOST;
             // Serial.println("UART timeout\n");
         } else {
