@@ -1,11 +1,12 @@
 #include <Arduino.h>
 #include <FastLED.h>
 
-#define NUM_LEDS 75 // neopixelの数
+#define NUM_LEDS 90 // neopixelの数
 #define DATA_PIN 6 // arduinoのd6ピン
 #define BRIGHTNESS 200 // LEDの最大輝度(0-255)
-#define NUM_STATUS_LEDS 15 // ステータス表示に使用するLEDの数
-#define NUM_BOOLS 13 // 受信するbool値の数 (statusBoolsのサイズ)
+#define NUM_STATUS_LEDS 30 // ステータス表示に使用するLEDの数
+#define NUM_MAIN_LEDS (NUM_LEDS - NUM_STATUS_LEDS) // メイン表示に使用するLEDの数
+#define NUM_BOOLS 12 // 受信するbool値の数 (statusBoolsのサイズ)
 #define STATUS_BRIGHTNESS 50 // ステータスLEDの個別の明るさ(0-255)
 
 CRGB leds[NUM_LEDS];
@@ -35,8 +36,7 @@ bool statusBlinkState = false;
  * @brief 消灯
 */
 void handleOff() {
-    fill_solid(leds + NUM_STATUS_LEDS, NUM_LEDS - NUM_STATUS_LEDS, CRGB::Black);
-    FastLED.show();
+    fill_solid(leds, NUM_LEDS, CRGB::Black);
 }
 
 /**
@@ -49,8 +49,7 @@ void handleUartLost() {
         blinkState = !blinkState;
     }
     CRGB color = blinkState ? CRGB::Yellow : CRGB::Black;
-    fill_solid(leds + NUM_STATUS_LEDS, NUM_LEDS - NUM_STATUS_LEDS, color);
-    FastLED.show();
+    fill_solid(leds, NUM_MAIN_LEDS, color);
 }
 
 /**
@@ -63,8 +62,7 @@ void handleCanLost() {
         blinkState = !blinkState;
     }
     CRGB color = blinkState ? CRGB::Red : CRGB::Black;
-    fill_solid(leds + NUM_STATUS_LEDS, NUM_LEDS - NUM_STATUS_LEDS, color);
-    FastLED.show();
+    fill_solid(leds, NUM_MAIN_LEDS, color);
 }
 
 /**
@@ -109,8 +107,7 @@ void handleNormal() {
         }
     }
     // 3. 計算した明るさを全てのLEDに適用
-    fill_solid(leds + NUM_STATUS_LEDS, NUM_LEDS - NUM_STATUS_LEDS, CRGB(brightness*0.45, 0, brightness*1.27));
-    FastLED.show();
+    fill_solid(leds, NUM_MAIN_LEDS, CRGB(brightness*0.45, 0, brightness*1.27));
 
     // // 白のウェーブ
     // const float WAVE_SPEED = 240.0;     // 波の移動速度（数値を大きくすると遅くなる）
@@ -146,64 +143,43 @@ void handleClear() {
         blinkState = !blinkState;
     }
     CRGB color = blinkState ? CRGB::Green : CRGB::Black;
-    fill_solid(leds + NUM_STATUS_LEDS, NUM_LEDS - NUM_STATUS_LEDS, color);
-    FastLED.show();
+    fill_solid(leds, NUM_MAIN_LEDS, color);
 }
 
 /**
  * @brief ステータスLEDの更新
  */
 void handleStatusLeds() {
-    unsigned long currentMillis = millis();
-    // 赤点滅用のタイマー (500ms間隔と仮定)
-    if (currentMillis - statusBlinkMillis >= 500) {
-        statusBlinkMillis = currentMillis;
-        statusBlinkState = !statusBlinkState;
-    }
+    uint8_t brightness = STATUS_BRIGHTNESS; // ステータスLEDの明るさ
+    // LED 60-64: statusBools[11]
+    CRGB color1 = statusBools[11] ? CRGB::Blue : CRGB::Black;
+    if (statusBools[11]) color1.nscale8(brightness);
+    for(int i = 60; i < 65; i++) leds[i] = color1;
 
-    // LEDのグループごとの制御
-    // グループ1: LED 0-4 (statusBools[6], [9])
-    CRGB colorGroup1 = CRGB::Black;
-    if (statusBools[6]) {
-        colorGroup1 = CRGB::Yellow;
-    } else if (statusBools[9]) {
-        colorGroup1 = CRGB::Blue;
-    }
+    // LED 65-69: statusBools[10]
+    CRGB color2 = statusBools[10] ? CRGB::Blue : CRGB::Black;
+    if (statusBools[10]) color2.nscale8(brightness);
+    for(int i = 65; i < 70; i++) leds[i] = color2;
 
-    // グループ2: LED 5-9 (statusBools[7], [10])
-    CRGB colorGroup2 = CRGB::Black;
-    if (statusBools[7]) {
-        colorGroup2 = CRGB::Yellow;
-    } else if (statusBools[10]) {
-        colorGroup2 = CRGB::Blue;
-    }
+    // LED 70-74: statusBools[9]
+    CRGB color3 = statusBools[9] ? CRGB::Blue : CRGB::Black;
+    if (statusBools[9]) color3.nscale8(brightness);
+    for(int i = 70; i < 75; i++) leds[i] = color3;
 
-    // グループ3: LED 10-14 (statusBools[8], [12])
-    CRGB colorGroup3 = CRGB::Black;
-    if (statusBools[8]) {
-        colorGroup3 = CRGB::Yellow;
-    } else if (statusBools[12]) {
-        colorGroup3 = CRGB::Blue;
-    }
+    // LED 75-79: statusBools[6]
+    CRGB color4 = statusBools[6] ? CRGB::Blue : CRGB::Black;
+    if (statusBools[6]) color4.nscale8(brightness);
+    for(int i = 75; i < 80; i++) leds[i] = color4;
 
-    if (statusBools[12]) {
-        colorGroup1 = CRGB::Black;
-        colorGroup2 = CRGB::Black;
-        colorGroup3 = CRGB::Black;
-    }
+    // LED 80-84: statusBools[7]
+    CRGB color5 = statusBools[7] ? CRGB::Blue : CRGB::Black;
+    if (statusBools[7]) color5.nscale8(brightness);
+    for(int i = 80; i < 85; i++) leds[i] = color5;
 
-    // 色の適用
-    for (int i = 0; i < NUM_STATUS_LEDS; i++) {
-        if (i < 5) {
-            leds[i] = colorGroup1;
-        } else if (i < 10) {
-            leds[i] = colorGroup2;
-        } else if (i < 15) {
-            leds[i] = colorGroup3;
-        }
-        // ステータスLEDの明るさを調整
-        leds[i].nscale8(STATUS_BRIGHTNESS);
-    }
+    // LED 85-89: statusBools[8]
+    CRGB color6 = statusBools[8] ? CRGB::Blue : CRGB::Black;
+    if (statusBools[8]) color6.nscale8(brightness);
+    for(int i = 85; i < 90; i++) leds[i] = color6;
 }
 
 /**
@@ -368,10 +344,17 @@ void checkSerialInput() {
                     break;
             }
 
+            if (!digitalRead(2)) {
+                currentState = OFF;
+            }
+
             // 2文字目以降（カンマ区切り）をパース
             // フォーマット例: "3,0,1,0,0..."
             // 最初のカンマを探す
-            int searchIndex = 1; 
+            // int searchIndex = 1; 
+            int firstCommaIndex = input.indexOf(',');
+            int searchIndex = (firstCommaIndex != -1) ? firstCommaIndex + 1 : input.length();
+
             for (int i = 0; i < NUM_BOOLS; i++) {
                 int commaIndex = input.indexOf(',', searchIndex);
                 if (commaIndex == -1) {
@@ -379,15 +362,14 @@ void checkSerialInput() {
                     if (searchIndex < input.length()) {
                         String valStr = input.substring(searchIndex); // 末尾まで
                         statusBools[i] = (valStr.toInt() == 1);
+                    } else {
+                        statusBools[i] = false;
                     }
                     break; 
                 }
                 String valStr = input.substring(searchIndex, commaIndex);
                 statusBools[i] = (valStr.toInt() == 1);
                 searchIndex = commaIndex + 1;
-            }
-            if (statusBools[12]) {
-                currentState = LedState::OFF;
             }
             Serial.println("curr_state: " + String(currentState));
             Serial.print("status_bools: ");
@@ -409,6 +391,7 @@ void checkSerialInput() {
 }
 
 void setup() {
+    pinMode(2, INPUT_PULLUP);
     Serial.begin(9600);
     Serial.setTimeout(50);
     delay(2000); // 起動待機
@@ -417,7 +400,7 @@ void setup() {
     FastLED.setBrightness(BRIGHTNESS);
 
     Serial.println("Hello, world");
-    currentState = NORMAL;
+    currentState = OFF;
 
     lastUartReceivedMillis = millis(); // 初期化
 
