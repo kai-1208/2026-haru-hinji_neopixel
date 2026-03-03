@@ -134,15 +134,15 @@ void handleNormal() {
 }
 
 /**
- * @brief 緑点滅
+ * @brief 白点滅
  */
 void handleClear() {
     unsigned long currentMillis = millis();
-    if (currentMillis - previousMillis >= 500) {
+    if (currentMillis - previousMillis >= 300) {
         previousMillis = currentMillis;
         blinkState = !blinkState;
     }
-    CRGB color = blinkState ? CRGB::Green : CRGB::Black;
+    CRGB color = blinkState ? CRGB::White : CRGB::Red;
     fill_solid(leds, NUM_MAIN_LEDS, color);
 }
 
@@ -151,9 +151,9 @@ void handleClear() {
  */
 void handleStatusLeds() {
     uint8_t brightness = STATUS_BRIGHTNESS; // ステータスLEDの明るさ
-    // LED 60-64: statusBools[11]
-    CRGB color1 = statusBools[11] ? CRGB::Blue : CRGB::Black;
-    if (statusBools[11]) color1.nscale8(brightness);
+    // LED 60-64: statusBools[9]
+    CRGB color1 = statusBools[9] ? CRGB::Blue : CRGB::Black;
+    if (statusBools[9]) color1.nscale8(brightness);
     for(int i = 60; i < 65; i++) leds[i] = color1;
 
     // LED 65-69: statusBools[10]
@@ -161,14 +161,14 @@ void handleStatusLeds() {
     if (statusBools[10]) color2.nscale8(brightness);
     for(int i = 65; i < 70; i++) leds[i] = color2;
 
-    // LED 70-74: statusBools[9]
-    CRGB color3 = statusBools[9] ? CRGB::Blue : CRGB::Black;
-    if (statusBools[9]) color3.nscale8(brightness);
+    // LED 70-74: statusBools[11]
+    CRGB color3 = statusBools[11] ? CRGB::Blue : CRGB::Black;
+    if (statusBools[11]) color3.nscale8(brightness);
     for(int i = 70; i < 75; i++) leds[i] = color3;
 
-    // LED 75-79: statusBools[6]
-    CRGB color4 = statusBools[6] ? CRGB::Blue : CRGB::Black;
-    if (statusBools[6]) color4.nscale8(brightness);
+    // LED 75-79: statusBools[8]
+    CRGB color4 = statusBools[8] ? CRGB::Blue : CRGB::Black;
+    if (statusBools[8]) color4.nscale8(brightness);
     for(int i = 75; i < 80; i++) leds[i] = color4;
 
     // LED 80-84: statusBools[7]
@@ -176,9 +176,9 @@ void handleStatusLeds() {
     if (statusBools[7]) color5.nscale8(brightness);
     for(int i = 80; i < 85; i++) leds[i] = color5;
 
-    // LED 85-89: statusBools[8]
-    CRGB color6 = statusBools[8] ? CRGB::Blue : CRGB::Black;
-    if (statusBools[8]) color6.nscale8(brightness);
+    // LED 85-89: statusBools[6]
+    CRGB color6 = statusBools[6] ? CRGB::Blue : CRGB::Black;
+    if (statusBools[6]) color6.nscale8(brightness);
     for(int i = 85; i < 90; i++) leds[i] = color6;
 }
 
@@ -344,9 +344,9 @@ void checkSerialInput() {
                     break;
             }
 
-            if (!digitalRead(2)) {
-                currentState = OFF;
-            }
+            // if (!digitalRead(2)) {
+            //     currentState = OFF;
+            // }
 
             // 2文字目以降（カンマ区切り）をパース
             // フォーマット例: "3,0,1,0,0..."
@@ -400,7 +400,7 @@ void setup() {
     FastLED.setBrightness(BRIGHTNESS);
 
     Serial.println("Hello, world");
-    currentState = OFF;
+    currentState = CLEAR;
 
     lastUartReceivedMillis = millis(); // 初期化
 
