@@ -422,5 +422,7 @@ void loop() {
         case CLEAR:         handleClear();        break;
     }
 
-    FastLED.show();
+    EVERY_N_MILLISECONDS(30) {
+        FastLED.show();
+    }
 }
