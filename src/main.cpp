@@ -384,8 +384,6 @@ void checkSerialInput() {
         if (millis() - lastUartReceivedMillis >= 2000) { // uart、し... 死んでる
             currentState = UART_LOST;
             // Serial.println("UART timeout\n");
-        } else {
-            currentState = NORMAL;
         }
     }
 }
@@ -400,7 +398,7 @@ void setup() {
     FastLED.setBrightness(BRIGHTNESS);
 
     Serial.println("Hello, world");
-    currentState = CLEAR;
+    // currentState = CLEAR;
 
     lastUartReceivedMillis = millis(); // 初期化
 
