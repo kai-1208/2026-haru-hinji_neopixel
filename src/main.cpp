@@ -134,16 +134,50 @@ void handleNormal() {
 }
 
 /**
- * @brief 白点滅
+ * @brief CLEAR: 中心から外側へ緑色のウェーブ
  */
 void handleClear() {
-    unsigned long currentMillis = millis();
-    if (currentMillis - previousMillis >= 300) {
-        previousMillis = currentMillis;
-        blinkState = !blinkState;
+    // セクション設定
+    const int NUM_SECTIONS = 4;
+    const int SECTION_SIZE = 15;
+    const int CENTERS[] = {7, 22, 37, 52}; // 各セクションの中心LED番号
+
+    // ウェーブのアニメーションパラメータ
+    const float WAVE_SPEED = 0.005; // 波の速さ (大きいほど速い)
+    const float WAVE_WIDTH = 3.0;   // 波の光っている部分の幅
+    
+    // 時間に基づいて、中心からの「光のピーク位置」を計算 (0.0 ～ SECTION_SIZE/2.0 の範囲を繰り返す)
+    // fmodを使って、中心から端(約7.5)まで動いたらまた中心に戻るのこぎり波を作る
+    float currentRadius = fmod(millis() * WAVE_SPEED, (float)(SECTION_SIZE / 2.0 + 2.0)); 
+
+    // 背景を黒でクリア（残像を残したい場合は nscale8 を使用）
+    // fill_solid(leds, NUM_MAIN_LEDS, CRGB::Black); 
+    // 残像効果を入れて滑らかにする場合:
+    for(int i = 0; i < NUM_MAIN_LEDS; i++) leds[i].nscale8(200);
+
+    for (int s = 0; s < NUM_SECTIONS; s++) {
+        int center = CENTERS[s];
+        int start = s * SECTION_SIZE;
+        int end = start + SECTION_SIZE;
+
+        for (int i = start; i < end; i++) {
+            // 中心からの距離
+            float dist = abs(i - center);
+
+            // 現在の波の半径(currentRadius)と、このLEDの距離(dist)の差が小さいほど明るくする
+            // ガウス関数のような計算で明るさを決定
+            float diff = dist - currentRadius;
+            float brightness = 255.0 * exp(-(diff * diff) / (2 * (WAVE_WIDTH / 2.0) * (WAVE_WIDTH / 2.0)));
+            
+            // LEDに色を加算（緑色） CRGB::Green は (0, 255, 0)
+            // 既存の色に足し合わせることで、ウェーブが重なっても綺麗に見える
+            if (brightness > 10) { // 閾値
+                //  leds[i] += CRGB(0, (uint8_t)brightness, 0);
+                 // もしくは単に設定する場合
+                 leds[i] = CRGB(0, (uint8_t)brightness, 0);
+            }
+        }
     }
-    CRGB color = blinkState ? CRGB::White : CRGB::Red;
-    fill_solid(leds, NUM_MAIN_LEDS, color);
 }
 
 /**
@@ -152,32 +186,32 @@ void handleClear() {
 void handleStatusLeds() {
     uint8_t brightness = STATUS_BRIGHTNESS; // ステータスLEDの明るさ
     // LED 60-64: statusBools[9]
-    CRGB color1 = statusBools[9] ? CRGB::Blue : CRGB::Red;
+    CRGB color1 = statusBools[9] ? CRGB::White : CRGB::Black;
     if (statusBools[9]) color1.nscale8(brightness);
     for(int i = 60; i < 65; i++) leds[i] = color1;
 
     // LED 65-69: statusBools[10]
-    CRGB color2 = statusBools[10] ? CRGB::Blue : CRGB::Red;
+    CRGB color2 = statusBools[10] ? CRGB::White : CRGB::Black;
     if (statusBools[10]) color2.nscale8(brightness);
     for(int i = 65; i < 70; i++) leds[i] = color2;
 
     // LED 70-74: statusBools[11]
-    CRGB color3 = statusBools[11] ? CRGB::Blue : CRGB::Red;
+    CRGB color3 = statusBools[11] ? CRGB::White : CRGB::Black;
     if (statusBools[11]) color3.nscale8(brightness);
     for(int i = 70; i < 75; i++) leds[i] = color3;
 
     // LED 75-79: statusBools[8]
-    CRGB color4 = statusBools[8] ? CRGB::Blue : CRGB::Red;
+    CRGB color4 = statusBools[8] ? CRGB::White : CRGB::Black;
     if (statusBools[8]) color4.nscale8(brightness);
     for(int i = 75; i < 80; i++) leds[i] = color4;
 
     // LED 80-84: statusBools[7]
-    CRGB color5 = statusBools[7] ? CRGB::Blue : CRGB::Red;
+    CRGB color5 = statusBools[7] ? CRGB::White : CRGB::Black;
     if (statusBools[7]) color5.nscale8(brightness);
     for(int i = 80; i < 85; i++) leds[i] = color5;
 
     // LED 85-89: statusBools[6]
-    CRGB color6 = statusBools[6] ? CRGB::Blue : CRGB::Red;
+    CRGB color6 = statusBools[6] ? CRGB::White : CRGB::Black;
     if (statusBools[6]) color6.nscale8(brightness);
     for(int i = 85; i < 90; i++) leds[i] = color6;
 }
@@ -412,7 +446,7 @@ void loop() {
     checkSerialInput();
     handleStatusLeds();
 
-    // currentState = NORMAL;
+    currentState = CLEAR;
 
     switch (currentState) {
         case OFF:           handleOff();          break;
