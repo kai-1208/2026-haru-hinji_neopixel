@@ -152,32 +152,32 @@ void handleClear() {
 void handleStatusLeds() {
     uint8_t brightness = STATUS_BRIGHTNESS; // ステータスLEDの明るさ
     // LED 60-64: statusBools[9]
-    CRGB color1 = statusBools[9] ? CRGB::Blue : CRGB::Black;
+    CRGB color1 = statusBools[9] ? CRGB::Blue : CRGB::Red;
     if (statusBools[9]) color1.nscale8(brightness);
     for(int i = 60; i < 65; i++) leds[i] = color1;
 
     // LED 65-69: statusBools[10]
-    CRGB color2 = statusBools[10] ? CRGB::Blue : CRGB::Black;
+    CRGB color2 = statusBools[10] ? CRGB::Blue : CRGB::Red;
     if (statusBools[10]) color2.nscale8(brightness);
     for(int i = 65; i < 70; i++) leds[i] = color2;
 
     // LED 70-74: statusBools[11]
-    CRGB color3 = statusBools[11] ? CRGB::Blue : CRGB::Black;
+    CRGB color3 = statusBools[11] ? CRGB::Blue : CRGB::Red;
     if (statusBools[11]) color3.nscale8(brightness);
     for(int i = 70; i < 75; i++) leds[i] = color3;
 
     // LED 75-79: statusBools[8]
-    CRGB color4 = statusBools[8] ? CRGB::Blue : CRGB::Black;
+    CRGB color4 = statusBools[8] ? CRGB::Blue : CRGB::Red;
     if (statusBools[8]) color4.nscale8(brightness);
     for(int i = 75; i < 80; i++) leds[i] = color4;
 
     // LED 80-84: statusBools[7]
-    CRGB color5 = statusBools[7] ? CRGB::Blue : CRGB::Black;
+    CRGB color5 = statusBools[7] ? CRGB::Blue : CRGB::Red;
     if (statusBools[7]) color5.nscale8(brightness);
     for(int i = 80; i < 85; i++) leds[i] = color5;
 
     // LED 85-89: statusBools[6]
-    CRGB color6 = statusBools[6] ? CRGB::Blue : CRGB::Black;
+    CRGB color6 = statusBools[6] ? CRGB::Blue : CRGB::Red;
     if (statusBools[6]) color6.nscale8(brightness);
     for(int i = 85; i < 90; i++) leds[i] = color6;
 }
