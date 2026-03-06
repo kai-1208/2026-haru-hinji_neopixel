@@ -134,17 +134,17 @@ void handleNormal() {
 }
 
 /**
- * @brief CLEAR: 中心から外側へ緑色のウェーブ
+ * @brief CLEAR: 中心から外側へ白色のウェーブ
  */
 void handleClear() {
     // セクション設定
-    const int NUM_SECTIONS = 4;
+    const int NUM_SECTIONS = 6;
     const int SECTION_SIZE = 15;
-    const int CENTERS[] = {7, 22, 37, 52}; // 各セクションの中心LED番号
+    const int CENTERS[] = {7, 22, 37, 52, 67, 82}; // 各セクションの中心LED番号
 
     // ウェーブのアニメーションパラメータ
-    const float WAVE_SPEED = 0.005; // 波の速さ (大きいほど速い)
-    const float WAVE_WIDTH = 3.0;   // 波の光っている部分の幅
+    const float WAVE_SPEED = 0.02; // 波の速さ (大きいほど速い)
+    const float WAVE_WIDTH = 1.0;   // 波の光っている部分の幅
     
     // 時間に基づいて、中心からの「光のピーク位置」を計算 (0.0 ～ SECTION_SIZE/2.0 の範囲を繰り返す)
     // fmodを使って、中心から端(約7.5)まで動いたらまた中心に戻るのこぎり波を作る
@@ -153,7 +153,7 @@ void handleClear() {
     // 背景を黒でクリア（残像を残したい場合は nscale8 を使用）
     // fill_solid(leds, NUM_MAIN_LEDS, CRGB::Black); 
     // 残像効果を入れて滑らかにする場合:
-    for(int i = 0; i < NUM_MAIN_LEDS; i++) leds[i].nscale8(200);
+    for(int i = 0; i < NUM_LEDS; i++) leds[i].nscale8(200);
 
     for (int s = 0; s < NUM_SECTIONS; s++) {
         int center = CENTERS[s];
@@ -167,14 +167,14 @@ void handleClear() {
             // 現在の波の半径(currentRadius)と、このLEDの距離(dist)の差が小さいほど明るくする
             // ガウス関数のような計算で明るさを決定
             float diff = dist - currentRadius;
-            float brightness = 255.0 * exp(-(diff * diff) / (2 * (WAVE_WIDTH / 2.0) * (WAVE_WIDTH / 2.0)));
+            float brightness = 200.0 * exp(-(diff * diff) / (2 * (WAVE_WIDTH / 2.0) * (WAVE_WIDTH / 2.0)));
             
-            // LEDに色を加算（緑色） CRGB::Green は (0, 255, 0)
+            // LEDに色を加算（白色） CRGB::White は (255, 255, 255)
             // 既存の色に足し合わせることで、ウェーブが重なっても綺麗に見える
             if (brightness > 10) { // 閾値
-                //  leds[i] += CRGB(0, (uint8_t)brightness, 0);
+                leds[i] += CRGB((uint8_t)brightness, (uint8_t)brightness, (uint8_t)brightness);
                  // もしくは単に設定する場合
-                 leds[i] = CRGB(0, (uint8_t)brightness, 0);
+                // leds[i] = CRGB((uint8_t)brightness, (uint8_t)brightness, (uint8_t)brightness);
             }
         }
     }
@@ -215,142 +215,6 @@ void handleStatusLeds() {
     if (statusBools[6]) color6.nscale8(brightness);
     for(int i = 85; i < 90; i++) leds[i] = color6;
 }
-
-/**
- * @brief 黄色点灯
- */
-// void handleAuto() {
-//     // --- 鼓動の見た目を調整する定数 ---
-//     const unsigned long BEAT_CYCLE_MS = 1200; // 1回の鼓動サイクル全体の時間 (ミリ秒)
-//     // --- 1回目の鼓動 (大きく「どくん」) ---
-//     const unsigned long FIRST_BEAT_START = 0;
-//     const unsigned long FIRST_BEAT_END = 400; // ★余韻のために少し時間を長く
-//     const unsigned long FIRST_BEAT_FADE_IN_MS = 60; // ★急速に明るくなる時間
-//     const uint8_t FIRST_BEAT_BRIGHTNESS = 200;
-//     // --- 2回目の鼓動 (小さく「どくん」) ---
-//     const unsigned long SECOND_BEAT_START = 300;
-//     const unsigned long SECOND_BEAT_END = 900; // ★余韻のために少し時間を長く
-//     const unsigned long SECOND_BEAT_FADE_IN_MS = 50; // ★急速に明るくなる時間
-//     const uint8_t SECOND_BEAT_BRIGHTNESS = 100;
-//     // 1. 現在の時刻をサイクル時間で割った余りを求める
-//     unsigned long timeInCycle = millis() % BEAT_CYCLE_MS;
-//     uint8_t brightness = 0; // 基本は消灯
-//     // 2. 現在の時刻がどの区間にあるかを判断する
-//     if (timeInCycle >= FIRST_BEAT_START && timeInCycle < FIRST_BEAT_END) {
-//         // --- 1回目の鼓動の処理 ---
-//         unsigned long peakTime = FIRST_BEAT_START + FIRST_BEAT_FADE_IN_MS;
-//         if (timeInCycle < peakTime) {
-//             // ★急速に明るくなっていく区間
-//             brightness = map(timeInCycle, FIRST_BEAT_START, peakTime, 0, FIRST_BEAT_BRIGHTNESS);
-//         } else {
-//             // ★ゆっくりと暗くなっていく区間（余韻）
-//             brightness = map(timeInCycle, peakTime, FIRST_BEAT_END, FIRST_BEAT_BRIGHTNESS, 0);
-//         }
-//     } else if (timeInCycle >= SECOND_BEAT_START && timeInCycle < SECOND_BEAT_END) {
-//         // --- 2回目の鼓動の処理 ---
-//         unsigned long peakTime = SECOND_BEAT_START + SECOND_BEAT_FADE_IN_MS;
-//         if (timeInCycle < peakTime) {
-//             // ★急速に明るくなっていく区間
-//             brightness = map(timeInCycle, SECOND_BEAT_START, peakTime, 0, SECOND_BEAT_BRIGHTNESS);
-//         } else {
-//             // ★ゆっくりと暗くなっていく区間（余韻）
-//             brightness = map(timeInCycle, peakTime, SECOND_BEAT_END, SECOND_BEAT_BRIGHTNESS, 0);
-//         }
-//     }
-//     // 3. 計算した明るさを全てのLEDに適用
-//     fill_solid(leds, NUM_LEDS, CRGB(brightness, brightness, 0));
-//     FastLED.show();
-//     // fill_solid(leds, NUM_LEDS, CRGB::Yellow);
-//     // FastLED.show();
-// }
-
-/**
- * @brief 黄色点滅(500ms間隔)
-  */
-// void handleSemiAuto() {
-//     unsigned long currentMillis = millis();
-//     if (currentMillis - previousMillis >= 500) {
-//         previousMillis = currentMillis;
-//         blinkState = !blinkState;
-//     }
-//     CRGB color = blinkState ? CRGB::Yellow : CRGB::Black;
-//     fill_solid(leds, NUM_LEDS, color);
-//     FastLED.show();
-// }
-
-/**
- * @brief 赤色の光が片道に流れる（スキャナー）
- */
-// void handleHighSpeed() {
-//     const uint8_t FADE_RATE = 5;   // 残像の消える速さ (0-255, 大きいほど速く消える)
-//     const uint8_t BPM = 140;         // 光が流れる速さ (Beats Per Minute)
-//     // 1. 全てのLEDを少しずつ暗くしていく（フェードアウト効果で残像を作る）
-//     for (int i = 0; i < NUM_LEDS; i++) {
-//         leds[i].nscale8(255 - FADE_RATE);
-//     }
-//     // 2. 時間に応じて0から255まで単調に増加する値を取得する
-//     uint8_t beat = beat8(BPM);
-//     // 3. その値(0-255)を、LEDの位置(0 ～ NUM_LEDS-1)の範囲に変換(マッピング)する
-//     int currentPos = map(beat, 0, 255, 0, NUM_LEDS - 1);
-//     // 4. 計算した位置のLEDを赤色で上書き点灯する
-//     leds[currentPos] = CRGB::Red;
-//     FastLED.show();
-// }
-
-/**
- * @brief N個の青い光が等間隔で流れる（時間制御による超低速フェード）
- */
-// void handleLowSpeed() {
-//     const int NUM_POINTS = 1; // 流れる数を設定
-//     const uint8_t BPM = 30;        // 光が流れる速さ
-//     // 消灯処理を行う「間隔」（ミリ秒）。この数値を大きくするほど、消灯は遅くなる
-//     const int FADE_INTERVAL_MS = 12; 
-//     // 一回の消灯処理でどれだけ暗くするか。数値を大きくすると、カクカクと消えるようになる
-//     const uint8_t FADE_AMOUNT = 5;
-//     // 1.「FADE_INTERVAL_MS」で指定した時間ごとに、中の処理を1回だけ実行する
-//     EVERY_N_MILLISECONDS(FADE_INTERVAL_MS) {
-//         for (int i = 0; i < NUM_LEDS; i++) {
-//             leds[i].nscale8(255 - FADE_AMOUNT);
-//         }
-//     }
-//     // 2. 先頭になる光の基準位置を計算する (ここは変更なし)
-//     uint8_t beat = beat8(BPM);
-//     int leader_pos = map(beat, 0, 255, 0, NUM_LEDS);
-//     // 3. 光と光の間隔を計算する
-//     int spacing = NUM_LEDS / NUM_POINTS;
-//     // 4. ループを使って、N個の光をそれぞれ計算して点灯させる
-//     for (int i = 0; i < NUM_POINTS; i++) {
-//         int current_pos = (leader_pos + i * spacing) % NUM_LEDS;
-//         leds[current_pos] = CRGB::Blue;
-//     }
-//     FastLED.show();
-// }
-
-/**
- * @brief 7. 待機モード：白色のランダムなきらめき
- */
-// void handleStandby() {
-//     // --- 見た目を調整する定数 ---
-//     const int FADE_SPEED = 254; // 全体を暗くする速さ (255に近いほどゆっくり)
-//     const int SPARKLE_INTERVAL_MS = 150; // 新しい光が発生する間隔 (ミリ秒)
-
-//     // 1. 全てのLEDをゆっくりと暗くしていく（フェードアウト効果）
-//     for (int i = 0; i < NUM_LEDS; i++) {
-//         leds[i].nscale8(FADE_SPEED);
-//     }
-
-//     // 2. 一定時間ごとに新しい光を追加する
-//     unsigned long currentMillis = millis();
-//     if (currentMillis - previousMillis >= SPARKLE_INTERVAL_MS) {
-//         previousMillis = currentMillis;
-
-//         // ランダムな位置に、ランダムな明るさの白を追加する
-//         int pos = random(NUM_LEDS);
-//         leds[pos] = CRGB(255, 255, 255);
-//     }
-    
-//     FastLED.show();
-// }
 
 /**
  * @brief 受信データのパース処理
@@ -432,7 +296,7 @@ void setup() {
     FastLED.setBrightness(BRIGHTNESS);
 
     Serial.println("Hello, world");
-    // currentState = CLEAR;
+    currentState = CLEAR;
 
     lastUartReceivedMillis = millis(); // 初期化
 
@@ -444,9 +308,12 @@ void setup() {
 
 void loop() {
     checkSerialInput();
-    handleStatusLeds();
 
-    currentState = CLEAR;
+    // currentState = CLEAR;
+
+    if (currentState != CLEAR) {
+        handleStatusLeds();
+    }
 
     switch (currentState) {
         case OFF:           handleOff();          break;
